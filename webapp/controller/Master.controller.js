@@ -7,8 +7,9 @@ sap.ui.define([
 	"sap/m/GroupHeaderListItem",
 	"sap/ui/Device",
 	"sap/ui/core/Fragment",
-	"../model/formatter"
-], function (BaseController, JSONModel, Filter, Sorter, FilterOperator, GroupHeaderListItem, Device, Fragment, formatter) {
+    "../model/formatter",
+    "sap/ui/core/format/DateFormat"
+], function (BaseController, JSONModel, Filter, Sorter, FilterOperator, GroupHeaderListItem, Device, Fragment, formatter, DateFormat) {
 	"use strict";
 
 	return BaseController.extend("orderbrowser.controller.Master", {
@@ -32,8 +33,51 @@ sap.ui.define([
 				// taken care of by the master list itself.
 				iOriginalBusyDelay = oList.getBusyIndicatorDelay();
 
+			this._oGroupFunctions = {
+				CompanyName: function (oContext) {
+					var sCompanyName = oContext.getProperty("Customer/CompanyName");
+					return {
+						key: sCompanyName,
+						text: sCompanyName
+					};
+				},
+
+				OrderDate: function (oContext) {
+					var oDate = oContext.getProperty("OrderDate"),
+						iYear = oDate.getFullYear(),
+						iMonth = oDate.getMonth() + 1,
+						sMonthName = this._oMonthNameFormat.format(oDate);
+
+					return {
+						key: iYear + "-" + iMonth,
+						text: this.getResourceBundle().getText("masterGroupTitleOrderedInPeriod", [sMonthName, iYear])
+					};
+				}.bind(this),
+
+				ShippedDate: function (oContext) {
+					var oDate = oContext.getProperty("ShippedDate");
+					// Special handling needed because shipping date may be empty (=> not yet shipped).
+					if (oDate != null) {
+						var iYear = oDate.getFullYear(),
+							iMonth = oDate.getMonth() + 1,
+							sMonthName = this._oMonthNameFormat.format(oDate);
+
+						return {
+							key: iYear + "-" + iMonth,
+							text: this.getResourceBundle().getText("masterGroupTitleShippedInPeriod", [sMonthName, iYear])
+						};
+					} else {
+						return {
+							key: 0,
+							text: this.getResourceBundle().getText("masterGroupTitleNotShippedYet")
+						};
+					}
+				}.bind(this)
+			};
+			this._oMonthNameFormat = DateFormat.getInstance({ pattern: "MMMM"});
 
 			this._oList = oList;
+
 			// keeps the filter and search state
 			this._oListFilterState = {
 				aFilter : [],
@@ -95,7 +139,7 @@ sap.ui.define([
 			var sQuery = oEvent.getParameter("query");
 
 			if (sQuery) {
-				this._oListFilterState.aSearch = [new Filter("OrderID", FilterOperator.Contains, sQuery)];
+				this._oListFilterState.aSearch = [new Filter("CustomerName", FilterOperator.Contains, sQuery)];
 			} else {
 				this._oListFilterState.aSearch = [];
 			}
@@ -119,7 +163,7 @@ sap.ui.define([
 		 */
 		onOpenViewSettings : function (oEvent) {
 			var sDialogTab = "filter";
-			if (oEvent.getSource() instanceof sap.m.Button) {
+			if (oEvent.getSource().isA("sap.m.Button")) {
 				var sButtonId = oEvent.getSource().getId();
 				if (sButtonId.match("sort")) {
 					sDialogTab = "sort";
@@ -128,8 +172,8 @@ sap.ui.define([
 				}
 			}
 			// load asynchronous XML fragment
-			if (!this.byId("viewSettingsDialog")) {
-				Fragment.load({
+			if (!this._pViewSettingsDialog) {
+				this._pViewSettingsDialog = Fragment.load({
 					id: this.getView().getId(),
 					name: "orderbrowser.view.ViewSettingsDialog",
 					controller: this
@@ -137,16 +181,17 @@ sap.ui.define([
 					// connect dialog to the root view of this component (models, lifecycle)
 					this.getView().addDependent(oDialog);
 					oDialog.addStyleClass(this.getOwnerComponent().getContentDensityClass());
-					oDialog.open(sDialogTab);
+					return oDialog;
 				}.bind(this));
-			} else {
-				this.byId("viewSettingsDialog").open(sDialogTab);
 			}
+			this._pViewSettingsDialog.then(function(oDialog) {
+				oDialog.open(sDialogTab);
+			});
 		},
 
 		/**
 		 * Event handler called when ViewSettingsDialog has been confirmed, i.e.
-		 * has been closed with 'OK'. In the case, the currently chosen filters, sorters or groupers
+		 * has been closed with 'OK'. In the case, the currently chosen filters or groupers
 		 * are applied to the master list, which can also mean that they
 		 * are removed from the master list, in case they are
 		 * removed in the ViewSettingsDialog.
@@ -154,23 +199,46 @@ sap.ui.define([
 		 * @public
 		 */
 		onConfirmViewSettingsDialog : function (oEvent) {
-
-			this._applySortGroup(oEvent);
+			var aFilterItems = oEvent.getParameter("filterItems"),
+				aFilters = [],
+				aCaptions = [];
+			aFilterItems.forEach(function (oItem) {
+				switch (oItem.getKey()) {
+					case "Shipped":
+						aFilters.push(new Filter("ShippedDate", FilterOperator.NE, null));
+						break;
+					case "NotShipped":
+						aFilters.push(new Filter("ShippedDate", FilterOperator.EQ, null));
+						break;
+					default:
+					break;
+				}
+				aCaptions.push(oItem.getText());
+			});
+			this._oListFilterState.aFilter = aFilters;
+			this._updateFilterBar(aCaptions.join(", "));
+			this._applyFilterSearch();
+			this._applyGrouper(oEvent);
 		},
 
 		/**
-		 * Apply the chosen sorter and grouper to the master list
+		 * Apply the chosen grouper to the master list
 		 * @param {sap.ui.base.Event} oEvent the confirm event
 		 * @private
 		 */
-		_applySortGroup: function (oEvent) {
+		_applyGrouper: function (oEvent) {
 			var mParams = oEvent.getParameters(),
 				sPath,
 				bDescending,
 				aSorters = [];
-			sPath = mParams.sortItem.getKey();
-			bDescending = mParams.sortDescending;
-			aSorters.push(new Sorter(sPath, bDescending));
+			// apply sorter to binding
+			if (mParams.groupItem) {
+				mParams.groupItem.getKey() === "CompanyName" ?
+					sPath = "Customer/" + mParams.groupItem.getKey() : sPath = mParams.groupItem.getKey();
+				bDescending = mParams.groupDescending;
+				var vGroup = this._oGroupFunctions[mParams.groupItem.getKey()];
+				aSorters.push(new Sorter(sPath, bDescending, vGroup));
+			}
 			this._oList.getBinding("items").sort(aSorters);
 		},
 
@@ -214,16 +282,6 @@ sap.ui.define([
 			});
 		},
 
-		/**
-		 * Event handler for navigating back.
-		 * We navigate back in the browser historz
-		 * @public
-		 */
-		onNavBack : function() {
-			// eslint-disable-next-line sap-no-history-manipulation
-			history.go(-1);
-		},
-
 		/* =========================================================== */
 		/* begin: internal methods                                     */
 		/* =========================================================== */
@@ -234,10 +292,8 @@ sap.ui.define([
 				isFilterBarVisible: false,
 				filterBarLabel: "",
 				delay: 0,
-				title: this.getResourceBundle().getText("masterTitleCount", [0]),
-				noDataText: this.getResourceBundle().getText("masterListNoDataText"),
-				sortBy: "OrderID",
-				groupBy: "None"
+				titleCount: 0,
+				noDataText: this.getResourceBundle().getText("masterListNoDataText")
 			});
 		},
 
@@ -263,15 +319,13 @@ sap.ui.define([
 
 		/**
 		 * Sets the item count on the master list header
-		 * @param {integer} iTotalItems the total number of items in the list
+		 * @param {int} iTotalItems the total number of items in the list
 		 * @private
 		 */
 		_updateListItemCount : function (iTotalItems) {
-			var sTitle;
 			// only update the counter if the length is final
 			if (this._oList.getBinding("items").isLengthFinal()) {
-				sTitle = this.getResourceBundle().getText("masterTitleCount", [iTotalItems]);
-				this.getModel("masterView").setProperty("/title", sTitle);
+				this.getModel("masterView").setProperty("/titleCount", iTotalItems);
 			}
 		},
 
@@ -304,5 +358,4 @@ sap.ui.define([
 		}
 
 	});
-
 });

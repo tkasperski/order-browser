@@ -54,9 +54,14 @@
 						</SearchField>
 						<ToolbarSpacer/>
 						<Button
-							id="sortButton"
+							id="filterButton"
 							press=".onOpenViewSettings"
-							icon="sap-icon://sort"
+							icon="sap-icon://filter"
+							type="Transparent"/>
+						<Button
+							id="groupButton"
+							press=".onOpenViewSettings"
+							icon="sap-icon://group-2"
 							type="Transparent"/>
 					</OverflowToolbar>
 				</headerToolbar>
