@@ -7,7 +7,12 @@ sap.ui.define([
 	"use strict";
 
 	// shortcut for sap.m.URLHelper
-	var URLHelper = mobileLibrary.URLHelper;
+    var URLHelper = mobileLibrary.URLHelper;
+    
+    function _calculateOrderTotal (fPreviousTotal, oCurrentContext) {
+		var fItemTotal = oCurrentContext.getObject().Quantity * oCurrentContext.getObject().UnitPrice;
+		return fPreviousTotal + fItemTotal;
+	}
 
 	return BaseController.extend("orderbrowser.controller.Detail", {
 
@@ -24,7 +29,12 @@ sap.ui.define([
 			var oViewModel = new JSONModel({
 				busy : false,
 				delay : 0,
-				lineItemListTitle : this.getResourceBundle().getText("detailLineItemTableHeading")
+                lineItemListTitle : this.getResourceBundle().getText("detailLineItemTableHeading"),
+				// Set fixed currency on view model (as the OData service does not provide a currency).
+				currency : "EUR",
+				// the sum of all items of this order
+				totalOrderAmount: 0,
+				selectedTab: ""
 			});
 
 			this.getRouter().getRoute("object").attachPatternMatched(this._onObjectMatched, this);
@@ -60,11 +70,14 @@ sap.ui.define([
 		 */
 		onListUpdateFinished : function (oEvent) {
 			var sTitle,
+				fOrderTotal = 0,
 				iTotalItems = oEvent.getParameter("total"),
-				oViewModel = this.getModel("detailView");
+				oViewModel = this.getModel("detailView"),
+				oItemsBinding = oEvent.getSource().getBinding("items"),
+				aItemsContext;
 
 			// only update the counter if the length is final
-			if (this.byId("lineItemsList").getBinding("items").isLengthFinal()) {
+			if (oItemsBinding.isLengthFinal()) {
 				if (iTotalItems) {
 					sTitle = this.getResourceBundle().getText("detailLineItemTableHeadingCount", [iTotalItems]);
 				} else {
@@ -72,6 +85,10 @@ sap.ui.define([
 					sTitle = this.getResourceBundle().getText("detailLineItemTableHeading");
 				}
 				oViewModel.setProperty("/lineItemListTitle", sTitle);
+
+				aItemsContext = oItemsBinding.getContexts();
+				fOrderTotal = aItemsContext.reduce(_calculateOrderTotal, 0);
+				oViewModel.setProperty("/totalOrderAmount", fOrderTotal);
 			}
 		},
 
