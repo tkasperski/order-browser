@@ -11,7 +11,13 @@
 		<semantic:titleHeading>
 			<Title
 				id="masterPageTitle"
-				text="{masterView>/title}"
+				text="{
+					parts: [
+						'i18n>masterTitleCount',
+						'masterView>/titleCount'
+					],
+					formatter: 'jQuery.sap.formatMessage'
+			    }"
 				level="H2"/>
 		</semantic:titleHeading>
 		<semantic:content>
@@ -41,9 +47,10 @@
                         <SearchField
 							id="searchField"
 							showRefreshButton="true"
+                            placeholder="Company Name Search"
 							tooltip="{i18n>masterSearchTooltip}"
 							search=".onSearch"
-							width="auto">
+							width="500px">
 							<layoutData>
 								<OverflowToolbarLayoutData
 									minWidth="150px"
