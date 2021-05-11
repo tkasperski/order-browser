@@ -38,7 +38,7 @@
 				selectionChange=".onSelectionChange">
 				<headerToolbar>
 					<OverflowToolbar>
-						<SearchField
+                        <SearchField
 							id="searchField"
 							showRefreshButton="true"
 							tooltip="{i18n>masterSearchTooltip}"
@@ -52,6 +52,7 @@
 									priority="NeverOverflow"/>
 							</layoutData>
 						</SearchField>
+
 						<ToolbarSpacer/>
 						<Button
 							id="filterButton"
