@@ -1,4 +1,6 @@
-sap.ui.define([], function () {
+sap.ui.define([
+    "sap/ui/model/type/Currency"
+], function (Currency) {
 	"use strict";
 
 	return {
@@ -16,6 +18,21 @@ sap.ui.define([], function () {
 
 			return parseFloat(sValue).toFixed(2);
         },
+
+        /**
+		 * Rounds the currency value to 2 digits
+		 *
+		 * @public
+		 * @param {number} iQuantity product quantity
+		 * @param {number} fPrice product price
+		 * @param {string} sCurrencyCode currency code for the price
+		 * @returns {string} formatted currency value with 2 digits
+		 */
+		calculateItemTotal: function (iQuantity, fPrice, sCurrencyCode) {
+			var oCurrency = new Currency({showMeasure: false});
+			var fTotal = iQuantity * fPrice;
+			return oCurrency.formatValue([fTotal.toFixed(2), sCurrencyCode], "string");
+		},
         
         /**
 		 * Provides a semantic state to indicate the delivery status based on shipped and required dates
