@@ -128,7 +128,10 @@ sap.ui.define([
 			oViewModel.setProperty("/busy", false);
 
 			this.getView().bindElement({
-				path : sObjectPath,
+                path : sObjectPath,
+                parameters: {
+                    expand: "Customer,Order_Details/Product,Employee"
+                },
 				events: {
 					change : this._onBindingChange.bind(this),
 					dataRequested : function () {

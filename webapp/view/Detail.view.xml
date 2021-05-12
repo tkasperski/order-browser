@@ -72,12 +72,14 @@
 							icon="sap-icon://shipping-status"
 							tooltip="{i18n>detailIconTabBarShipping}"
 							key="shipping">
+                            <mvc:XMLView viewName="orderbrowser.view.Shipping"/>
 						</IconTabFilter>
 						<IconTabFilter
 							id="iconTabFilterProcessor"
 							icon="sap-icon://employee"
 							tooltip="{i18n>detailIconTabBarProcessor}"
 							key="processor">
+                            <mvc:XMLView viewName="orderbrowser.view.Processor"/>
 						</IconTabFilter>
 					</items>
 				</IconTabBar>

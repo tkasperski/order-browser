@@ -35,6 +35,23 @@ sap.ui.define([
 		},
         
         /**
+		 * Converts a binary string into an image format suitable for the src attribute
+		 *
+		 * @public
+		 * @param {string} vData a binary string representing the image data
+		 * @returns {string} formatted string with image metadata based on the input or a default image when the input is empty
+		 */
+		handleBinaryContent: function(vData){
+			if (vData) {
+				var sMetaData1 = 'data:image/jpeg;base64,';
+				var sMetaData2 = vData.substr(104); // stripping the first 104 bytes from the binary data when using base64 encoding.
+				return sMetaData1 + sMetaData2;
+			} else {
+				return "../images/Employee.png";
+			}
+		},
+
+        /**
 		 * Provides a semantic state to indicate the delivery status based on shipped and required dates
 		 *
 		 * @public
