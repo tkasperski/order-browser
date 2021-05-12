@@ -95,7 +95,7 @@
 						<Toolbar id="lineItemsToolbar">
 							<Title
 								id="lineItemsHeader"
-								text="{detailView>/lineItemListTitle}"/>
+								text="{i18n>detailLineItemTableHeading}"/>
 						</Toolbar>
 					</headerToolbar>
 					<columns>

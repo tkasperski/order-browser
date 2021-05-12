@@ -37,8 +37,8 @@ sap.ui.define([
 				selectedTab: ""
 			});
 
-			this.getRouter().getRoute("object").attachPatternMatched(this._onObjectMatched, this);
-
+            this.getRouter().getRoute("object").attachPatternMatched(this._onObjectMatched, this);
+            
 			this.setModel(oViewModel, "detailView");
 
 			this.getOwnerComponent().getModel().metadataLoaded().then(this._onMetadataLoaded.bind(this));
